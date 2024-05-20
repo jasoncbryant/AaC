@@ -42,6 +42,7 @@ class DefinitionParser():
         Returns:
             The file name and line number of the requested Lexeme value.
         """
+        source_location: SourceLocation
         lexeme = [lexeme for lexeme in lexemes if lexeme.value == lexeme_value]
         location_str = (
             "Unable to identify source and location"  # this is the 'not found' case
@@ -50,6 +51,7 @@ class DefinitionParser():
             source_str = lexeme[0].source
             line_str = lexeme[0].location.line + 1
             location_str = f"File: {source_str}  Line: {line_str}"
+            source_location = lexeme[0].location
         elif len(lexeme) > 1:  # this is the ambiguous match case
             # check to see if location source is the same for all matches
             if all(
@@ -60,6 +62,7 @@ class DefinitionParser():
             ):
                 source_str = lexeme[0].source
                 location_str = f"File: {source_str}  Possible Lines: {', '.join([str(lex.location.line+1) for lex in lexeme])}"
+                source_location = lexeme[0].location
             else:  # if not, just list each possible location
                 location_str = "Unable to identify unique location - "
                 for lex in lexeme:
@@ -580,7 +583,7 @@ class DefinitionParser():
         python_type = defining_definition.structure["primitive"]["python_type"]
         if not field_value:
             if is_required:
-                raise LanguageError(message=f"Missing required field {field_name}.", location=None)
+                raise LanguageError(message=f"Missing required field {field_name}.", location=get_location_str(defining_definition.structure["name"], lexemes))
             if is_list:
                 field_value = []
         elif is_list:
