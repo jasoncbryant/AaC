@@ -91,7 +91,7 @@ def check_success(context):
 
 
 @when(u'I load the "{model_file}" model')
-def step_impl(context, model_file):
+def load_model(context, model_file):
     """
     Load a model file and put it into the context.
     
@@ -109,7 +109,7 @@ def step_impl(context, model_file):
 
 
 @then(u'I should have {count} total {root_key} definitions')
-def step_impl(context, count, root_key):
+def check_count_by_root_key(context, count, root_key):
     """
     Evaluate the number of root_key items parsed from a model.
     
@@ -130,7 +130,7 @@ def step_impl(context, count, root_key):
 
 
 @then(u'I should have requirement id {req_id}')
-def step_impl(context, req_id):
+def check_req_id(context, req_id):
     """
     Evaluate the expected req ids are present in the parsed items.
 
