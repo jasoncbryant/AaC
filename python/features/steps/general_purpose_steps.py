@@ -1,7 +1,9 @@
 """General purpose steps for the behave BDD tests."""""
 from behave import given, when, then, use_step_matcher
 import os
+import json
 from aac.execute.command_line import cli, initialize_cli
+from aac.context.language_context import LanguageContext
 from click.testing import CliRunner
 from typing import Tuple
 
@@ -10,7 +12,7 @@ use_step_matcher("cfparse")
 
 def get_model_file(context, path: str) -> str:
     """
-    Utility function to get the full path to the given model file.
+    Retrieve the full path to the given model file.
 
     Args:
         context: Active context to check against.
@@ -24,7 +26,7 @@ def get_model_file(context, path: str) -> str:
 
 def run_cli_command_with_args(command_name: str, args: list[str]) -> Tuple[int, str]:
     """
-    Utility function to invoke the CLI command with the given arguments.
+    Invoke the CLI command with the given arguments.
 
     Args:
         command_name (str): CLI command to be executed.
@@ -51,6 +53,7 @@ def given_model(context, model_file: str):
         context: Active context to check against.
         model_file (str): Path to the model file being evaluated.
     """
+    print(f"DEBUG:  given model {model_file}")
     model_path = get_model_file(context, model_file)
     if not os.path.exists(model_path):
         raise AssertionError(f"Model file {model_path} does not exist")
@@ -85,3 +88,60 @@ def check_success(context):
         raise AssertionError(
             f"Model check failed with message: {context.output_message}"
         )
+
+
+@when(u'I load the "{model_file}" model')
+def step_impl(context, model_file):
+    """
+    Load a model file and put it into the context.
+    
+    Args:
+        context: Active context to check against.
+        model_file: Path of model file to load.
+    """
+    try:
+        aac_context = LanguageContext()
+        model_path = get_model_file(context, model_file)
+        definitions = aac_context.parse_and_load(model_path)
+        context.aac_loaded_definitions = definitions
+    except Exception as e:
+        raise AssertionError(f"Failed to load model file {model_file} with exception {e}")
+
+
+@then(u'I should have {count} total {root_key} definitions')
+def step_impl(context, count, root_key):
+    """
+    Evaluate the number of root_key items parsed from a model.
+    
+    Args:
+        context: Active context to check against.
+        count: The number of definitions loaded from the model.
+        root_key:  The root_key for the definitions of interest.
+    """
+    items = []
+    for definition in context.aac_loaded_definitions:
+        if definition.get_root_key() == root_key:
+            items.append(definition)
+
+    if len(items) != int(count):
+        raise AssertionError(
+            f"Found {len(items)} with root_key {root_key}, but expected {count}."
+        )
+
+
+@then(u'I should have requirement id {req_id}')
+def step_impl(context, req_id):
+    """
+    Evaluate the expected req ids are present in the parsed items.
+
+    Args:
+        context: Active context to check against.
+        req_id_list: A list of req id values.
+    """
+    print("DEBUG: running 'I should have requirement ids' step_impl for {req_id}")
+    parsed_ids = []
+    for definition in context.aac_loaded_definitions:
+        if definition.get_root_key() == "req":
+            parsed_ids.append(definition.instance.id)
+    if req_id not in parsed_ids:
+        raise AssertionError(f"Expected id {req_id} not found in parsed req ids.")
